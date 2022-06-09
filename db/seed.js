@@ -182,6 +182,32 @@
 // rebuildDB();
 // testDB();
 
+// await client.query(`
+//       CREATE TABLE users (
+//         id SERIAL PRIMARY KEY,
+//         username varchar(255) UNIQUE NOT NULL,
+//         password varchar(255) NOT NULL,
+//         name varchar(255) NOT NULL,
+//         location varchar(255) NOT NULL,
+//         active boolean DEFAULT true
+//       );
+//       CREATE TABLE posts (
+//         id SERIAL PRIMARY KEY,
+//         "authorId" INTEGER REFERENCES users(id),
+//         title varchar(255) NOT NULL,
+//         content TEXT NOT NULL,
+//         active BOOLEAN DEFAULT true
+//       );
+//       CREATE TABLE tags (
+//           id SERIAL PRIMARY KEY,
+//           name VARCHAR(255) UNIQUE NOT NULL,
+//       )
+//       CREATE TABLE post_tags (
+//         "postId" INTEGER REFERENCES posts(id),
+//         "tagId" INTEGER REFERENCES tags(id),
+//         UNIQUE ("postId", "tagId")
+//       );
+//     `);
 
 const {  
   client,
@@ -192,10 +218,7 @@ const {
   createPost,
   updatePost,
   getAllPosts,
-  getPostsByUser,
-  addTagsToPost,
-  createTags,
-  createPostTag,
+  getPostsByUser
 } = require('./index');
 
 async function dropTables() {
@@ -204,8 +227,6 @@ async function dropTables() {
 
     // have to make sure to drop in correct order
     await client.query(`
-      DROP TABLE IF EXISTS post_tags;
-      DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS posts;
       DROP TABLE IF EXISTS users;
     `);
@@ -236,15 +257,6 @@ async function createTables() {
         title varchar(255) NOT NULL,
         content TEXT NOT NULL,
         active BOOLEAN DEFAULT true
-      );
-      CREATE TABLE tags (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(255) UNIQUE NOT NULL,
-      )
-      CREATE TABLE post_tags (
-        "postId" INTEGER REFERENCES posts(id),
-        "tagId" INTEGER REFERENCES tags(id),
-        UNIQUE ("postId", "tagId")
       );
     `);
 
@@ -285,7 +297,6 @@ async function createInitialUsers() {
   }
 }
 
-
 async function createInitialPosts() {
   try {
     const [albert, sandra, glamgal] = await getAllUsers();
@@ -294,22 +305,19 @@ async function createInitialPosts() {
     await createPost({
       authorId: albert.id,
       title: "First Post",
-      content: "This is my first post. I hope I love writing blogs as much as I love writing them.",
-      tags: ["#happy", "#youcandoanything"]
+      content: "This is my first post. I hope I love writing blogs as much as I love writing them."
     });
 
     await createPost({
       authorId: sandra.id,
       title: "How does this work?",
-      content: "Seriously, does this even do anything?",
-      tags: ["#happy", "#worst-day-ever"]
+      content: "Seriously, does this even do anything?"
     });
 
     await createPost({
       authorId: glamgal.id,
       title: "Living the Glam Life",
-      content: "Do you even? I swear that half of you are posing.",
-      tags: ["#happy", "#youcandoanything", "#canmandoeverything"]
+      content: "Do you even? I swear that half of you are posing."
     });
     console.log("Finished creating posts!");
   } catch (error) {
@@ -317,52 +325,6 @@ async function createInitialPosts() {
     throw error;
   }
 }
-
-
-
-
-// async function createInitialPosts() {
-//   try {
-//     const [albert, sandra, glamgal] = await getAllUsers();
-
-//     console.log("Starting to create posts...");
-//     await createPost({
-//       authorId: albert.id,
-//       title: "First Post",
-//       content: "This is my first post. I hope I love writing blogs as much as I love writing them."
-//     });
-
-//     await createPost({
-//       authorId: sandra.id,
-//       title: "How does this work?",
-//       content: "Seriously, does this even do anything?"
-//     });
-
-//     await createPost({
-//       authorId: glamgal.id,
-//       title: "Living the Glam Life",
-//       content: "Do you even? I swear that half of you are posing."
-//     });
-//     console.log("Finished creating posts!");
-//   } catch (error) {
-//     console.log("Error creating posts!");
-//     throw error;
-//   }
-// }
-
-// async function rebuildDB() {
-//   try {
-//     client.connect();
-
-//     await dropTables();
-//     await createTables();
-//     await createInitialUsers();
-//     await createInitialPosts();
-//   } catch (error) {
-//     console.log("Error during rebuildDB")
-//     throw error;
-//   }
-// }
 
 async function rebuildDB() {
   try {
@@ -377,7 +339,6 @@ async function rebuildDB() {
     throw error;
   }
 }
-
 
 async function testDB() {
   try {
@@ -410,51 +371,14 @@ async function testDB() {
     console.log("Result:", albert);
 
     console.log("Finished database tests!");
-    
-
-        console.log("Calling updatePost on posts[1], only updating tags");
-    const updatePostTagsResult = await updatePost(posts[1].id, {
-      tags: ["#youcandoanything", "#redfish", "#bluefish"]
-    });
-
-    
-    console.log("Result:", updatePostTagsResult);
   } catch (error) {
     console.log("Error during testDB");
     throw error;
   }
-
-  
 }
-
-
-// async function createInitialTags() {
-//   try {
-//     console.log("Starting to create tags...");
-
-//     const [happy, sad, inspo, catman] = await createTags([
-//       '#happy', 
-//       '#worst-day-ever', 
-//       '#youcandoanything',
-//       '#catmandoeverything'
-//     ]);
-
-//     const [postOne, postTwo, postThree] = await getAllPosts();
-
-//     await addTagsToPost(postOne.id, [happy, inspo]);
-//     await addTagsToPost(postTwo.id, [sad, inspo]);
-//     await addTagsToPost(postThree.id, [happy, catman, inspo]);
-
-//     console.log("Finished creating tags!");
-//   } catch (error) {
-//     console.log("Error creating tags!");
-//     throw error;
-//   }
-// }
 
 
 rebuildDB()
   .then(testDB)
   .catch(console.error)
   .finally(() => client.end());
-
