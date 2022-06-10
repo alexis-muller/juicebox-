@@ -209,6 +209,22 @@
 //       );
 //     `);
 
+// async function dropTables() {
+//   try {
+//     console.log("Starting to drop tables...");
+
+    // have to make sure to drop in correct order
+    // await client.query(`
+    //   DROP TABLE IF EXISTS posts;
+    //   DROP TABLE IF EXISTS users;
+    // `);
+//     console.log("Finished dropping tables!");
+//   } catch (error) {
+//     console.error("Error dropping tables!");
+//     throw error;
+//   }
+// }
+
 const {  
   client,
   createUser,
@@ -218,15 +234,22 @@ const {
   createPost,
   updatePost,
   getAllPosts,
-  getPostsByUser
+  getPostsByUser,
+  getPostById,
+  createTags, 
+  addTagsToPost
 } = require('./index');
 
+/*Part Three*/
+/*Dropping Tabbles*/
 async function dropTables() {
   try {
     console.log("Starting to drop tables...");
 
     // have to make sure to drop in correct order
     await client.query(`
+      DROP TABLE IF EXISTS post_tags;
+      DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS posts;
       DROP TABLE IF EXISTS users;
     `);
@@ -242,7 +265,7 @@ async function createTables() {
   try {
     console.log("Starting to build tables...");
 
-    await client.query(`
+       await client.query(`
       CREATE TABLE users (
         id SERIAL PRIMARY KEY,
         username varchar(255) UNIQUE NOT NULL,
@@ -258,6 +281,15 @@ async function createTables() {
         content TEXT NOT NULL,
         active BOOLEAN DEFAULT true
       );
+      CREATE TABLE tags (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) UNIQUE NOT NULL
+      );
+      CREATE TABLE post_tags (
+        "postId" INTEGER REFERENCES posts(id),
+        "tagId" INTEGER REFERENCES tags(id),
+        UNIQUE ("postId", "tagId")
+      );
     `);
 
     console.log("Finished building tables!");
@@ -266,6 +298,8 @@ async function createTables() {
     throw error;
   }
 }
+
+
 
 async function createInitialUsers() {
   try {
@@ -326,6 +360,92 @@ async function createInitialPosts() {
   }
 }
 
+// async function createTags(tagList) {
+//   if (tagList.length === 0) { 
+//     return; 
+//   }
+
+//   // need something like: $1), ($2), ($3 
+//   const insertValues = tagList.map(
+//     (_, index) => `$${index + 1}`).join('), (');
+//   // then we can use: (${ insertValues }) in our string template
+
+// `INSERT INTO tags(name)
+// VALUES ('#tag'), ('#othertag'), ('#moretag')
+// ON CONFLICT (name) DO NOTHING;`
+
+//   // need something like $1, $2, $3
+// `INSERT INTO tags(name)
+// VALUES ($1), ($2), ($3)
+// ON CONFLICT (name) DO NOTHING;`
+
+//   const selectValues = tagList.map(
+//     (_, index) => `$${index + 1}`).join(', ');
+//   // then we can use (${ selectValues }) in our string template
+
+
+  
+
+//   try {
+//     // insert the tags, doing nothing on conflict
+//     // returning nothing, we'll query after
+
+
+
+//     // select all tags where the name is in our taglist
+// `SELECT * FROM tags
+// WHERE name
+// IN ('#tag', '#othertag', '#moretag');`
+
+//     // return the rows from the query
+
+// `SELECT * FROM tags
+// WHERE name
+// IN ($1, $2, $3);`
+
+//   } catch (error) {
+//     throw error;
+//   }
+// }
+
+async function createPostTag(postId, tagId) {
+  try {
+    await client.query(`
+      INSERT INTO post_tags("postId", "tagId")
+      VALUES ($1, $2)
+      ON CONFLICT ("postId", "tagId") DO NOTHING;
+    `, [postId, tagId]);
+  } catch (error) {
+    throw error;
+  }
+}
+
+
+
+async function createInitialTags() {
+  try {
+    console.log("Starting to create tags...");
+
+    const [happy, sad, inspo, catman] = await createTags([
+      '#happy', 
+      '#worst-day-ever', 
+      '#youcandoanything',
+      '#catmandoeverything'
+    ]);
+
+    const [postOne, postTwo, postThree] = await getAllPosts();
+
+    await addTagsToPost(postOne.id, [happy, inspo]);
+    await addTagsToPost(postTwo.id, [sad, inspo]);
+    await addTagsToPost(postThree.id, [happy, catman, inspo]);
+
+    console.log("Finished creating tags!");
+  } catch (error) {
+    console.log("Error creating tags!");
+    throw error;
+  }
+}
+
 async function rebuildDB() {
   try {
     client.connect();
@@ -334,6 +454,7 @@ async function rebuildDB() {
     await createTables();
     await createInitialUsers();
     await createInitialPosts();
+    await createInitialTags(); // new
   } catch (error) {
     console.log("Error during rebuildDB")
     throw error;
