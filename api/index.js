@@ -4,8 +4,8 @@
 const express = require("express");
 const apiRouter = express.Router();
 
-// const usersRouter = require("./users");
-// apiRouter.use("/users", usersRouter);
+const usersRouter = require("./users");
+apiRouter.use("/users", usersRouter);
 
 // server.use(async (req, res, next) => {
 //   const prefix = "Bearer ";
@@ -72,6 +72,14 @@ apiRouter.use(async (req, res, next) => {
       message: `Authorization token must start with ${prefix}`,
     });
   }
+});
+
+apiRouter.use((req, res, next) => {
+  if (req.user) {
+    console.log("User is set:", req.user);
+  }
+
+  next();
 });
 
 // Attach routers below here
